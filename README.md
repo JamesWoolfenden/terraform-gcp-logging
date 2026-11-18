@@ -56,12 +56,12 @@ No modules.
 | [google_bigquery_dataset_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/bigquery_dataset_iam_member) | resource |
 | [google_kms_crypto_key_iam_member.logging_service_agent](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_crypto_key_iam_member) | resource |
 | [google_logging_project_bucket_config.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_bucket_config) | resource |
-| [google_logging_project_cmek_settings.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/logging_project_cmek_settings) | data source |
 | [google_logging_project_exclusion.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_exclusion) | resource |
 | [google_logging_project_sink.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_sink) | resource |
-| [google_project.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/project) | data source |
 | [google_pubsub_topic_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/pubsub_topic_iam_member) | resource |
 | [google_storage_bucket_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_bucket_iam_member) | resource |
+| [google_logging_project_cmek_settings.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/logging_project_cmek_settings) | data source |
+| [google_project.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/project) | data source |
 
 ## Inputs
 
@@ -70,12 +70,12 @@ No modules.
 | <a name="input_bucket_id"></a> [bucket\_id](#input\_bucket\_id) | ID of the log bucket to create | `string` | n/a | yes |
 | <a name="input_description"></a> [description](#input\_description) | Human-readable description of the log bucket | `string` | n/a | yes |
 | <a name="input_enable_analytics"></a> [enable\_analytics](#input\_enable\_analytics) | Enable Log Analytics on the bucket so logs can be queried with SQL | `bool` | `false` | no |
-| <a name="input_exclusions"></a> [exclusions](#input\_exclusions) | Optional project-level log exclusions (applied to the \_Default sink), keyed by exclusion name. Use sparingly: excluded logs are dropped, not stored | <pre>map(object({filter = string description = optional(string) disabled = optional(bool, false)}))</pre> | `{}` | no |
+| <a name="input_exclusions"></a> [exclusions](#input\_exclusions) | Optional project-level log exclusions (applied to the \_Default sink), keyed by exclusion name. Use sparingly: excluded logs are dropped, not stored | <pre>map(object({<br/>    filter      = string<br/>    description = optional(string)<br/>    disabled    = optional(bool, false)<br/>  }))</pre> | `{}` | no |
 | <a name="input_kms_key_name"></a> [kms\_key\_name](#input\_kms\_key\_name) | KMS crypto key used to encrypt the log bucket; must be in the same location as var.location | `string` | n/a | yes |
 | <a name="input_location"></a> [location](#input\_location) | Location of the log bucket; must be a region (not global) so it can be protected with a regional CMEK key | `string` | `"europe-west2"` | no |
 | <a name="input_locked"></a> [locked](#input\_locked) | Lock the bucket's retention policy; once locked the bucket and its retention cannot be reduced or deleted | `bool` | `false` | no |
 | <a name="input_retention_days"></a> [retention\_days](#input\_retention\_days) | Number of days logs are retained in the bucket (minimum 30, maximum 3650) | `number` | `365` | no |
-| <a name="input_sinks"></a> [sinks](#input\_sinks) | Map of sink name to sink definition. destination\_type is one of storage, pubsub, bigquery or logging and must match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T, bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B). Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity, and the module grants it write access on storage/pubsub/bigquery destinations. | <pre>map(object({destination = optional(string) destination_type = optional(string, "logging") filter = string description = string disabled = optional(bool, false) use_partitioned_tables = optional(bool, true) exclusions = optional(list(object({name = string filter = string description = optional(string) disabled = optional(bool, false)})), [])}))</pre> | `{}` | no |
+| <a name="input_sinks"></a> [sinks](#input\_sinks) | Map of sink name to sink definition. destination\_type is one of storage, pubsub, bigquery or logging and must<br/>match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T,<br/>bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B).<br/>Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity,<br/>and the module grants it write access on storage/pubsub/bigquery destinations. | <pre>map(object({<br/>    destination            = optional(string)<br/>    destination_type       = optional(string, "logging")<br/>    filter                 = string<br/>    description            = string<br/>    disabled               = optional(bool, false)<br/>    use_partitioned_tables = optional(bool, true)<br/>    exclusions = optional(list(object({<br/>      name        = string<br/>      filter      = string<br/>      description = optional(string)<br/>      disabled    = optional(bool, false)<br/>    })), [])<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
 
