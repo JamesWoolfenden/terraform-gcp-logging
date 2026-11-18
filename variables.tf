@@ -46,8 +46,8 @@ variable "kms_key_name" {
   sensitive   = true
 
   validation {
-    condition     = length(trimspace(var.kms_key_name)) > 0
-    error_message = "var.kms_key_name must be a non-empty string"
+    condition     = can(regex("^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[^/]+$", var.kms_key_name))
+    error_message = "var.kms_key_name must be a full crypto key ID: projects/P/locations/L/keyRings/R/cryptoKeys/K"
   }
 }
 
@@ -93,7 +93,9 @@ variable "sinks" {
   match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T,
   bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B).
   Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity,
-  and the module grants it write access on storage/pubsub/bigquery destinations.
+  and the module grants it write access on storage/pubsub/bigquery destinations. A logging destination in another
+  project is not granted: give that sink's writer identity (output sink_writer_identities) roles/logging.bucketWriter
+  on the destination project, or its logs are not delivered.
   EOT
   default     = {}
 

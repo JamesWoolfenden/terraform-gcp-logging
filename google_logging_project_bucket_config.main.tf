@@ -12,4 +12,11 @@ resource "google_logging_project_bucket_config" "main" {
   }
 
   depends_on = [google_kms_crypto_key_iam_member.logging_service_agent]
+
+  lifecycle {
+    precondition {
+      condition     = strcontains(var.kms_key_name, "/locations/${var.location}/")
+      error_message = "var.kms_key_name must be a key in the same location as the log bucket (${var.location}); Cloud Logging rejects a CMEK key from another location"
+    }
+  }
 }
