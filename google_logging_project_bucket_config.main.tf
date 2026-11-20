@@ -11,7 +11,7 @@ resource "google_logging_project_bucket_config" "main" {
     kms_key_name = var.kms_key_name
   }
 
-  depends_on = [google_kms_crypto_key_iam_member.logging_service_agent]
+  depends_on = [time_sleep.kms_propagation]
 
   lifecycle {
     precondition {

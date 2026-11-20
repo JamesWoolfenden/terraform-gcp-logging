@@ -1,0 +1,31 @@
+id: LOCAL_GCP_001
+name: Cloud Logging sinks to a log bucket must target a bucket with a locked retention policy
+principle: data-protection
+severity: MEDIUM
+rationale: |
+  A sink that routes to a Cloud Logging bucket whose retention is not locked
+  lets anyone with logging.buckets.update shorten retention_days or delete the
+  bucket, purging the routed logs before their retention period ends. Locking
+  makes the retention immutable, the log-bucket equivalent of GCS Bucket Lock.
+message: |
+  google_logging_project_sink routes to a google_logging_project_bucket_config
+  that does not set locked = true.
+remediation: |
+  Lock the destination bucket's retention (irreversible):
+
+    resource "google_logging_project_bucket_config" "audit" {
+      retention_days = 365
+      locked         = true
+    }
+resources:
+  google_logging_project_sink:
+    filter:
+      path: destination
+      matches: '^logging\.googleapis\.com/'
+    references:
+      type: google_logging_project_bucket_config
+      via: destination
+      must:
+        path: locked
+        equals: true
+        required: true

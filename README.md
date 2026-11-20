@@ -44,6 +44,7 @@ No requirements.
 | Name | Version |
 | ---- | ------- |
 | <a name="provider_google"></a> [google](#provider\_google) | n/a |
+| <a name="provider_time"></a> [time](#provider\_time) | n/a |
 
 ## Modules
 
@@ -58,8 +59,10 @@ No modules.
 | [google_logging_project_bucket_config.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_bucket_config) | resource |
 | [google_logging_project_exclusion.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_exclusion) | resource |
 | [google_logging_project_sink.main](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/logging_project_sink) | resource |
+| [google_project_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
 | [google_pubsub_topic_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/pubsub_topic_iam_member) | resource |
 | [google_storage_bucket_iam_member.sink_writer](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_bucket_iam_member) | resource |
+| [time_sleep.kms_propagation](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [google_logging_project_cmek_settings.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/logging_project_cmek_settings) | data source |
 | [google_project.current](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/project) | data source |
 
@@ -75,7 +78,7 @@ No modules.
 | <a name="input_location"></a> [location](#input\_location) | Location of the log bucket; must be a region (not global) so it can be protected with a regional CMEK key | `string` | `"europe-west2"` | no |
 | <a name="input_locked"></a> [locked](#input\_locked) | Lock the bucket's retention policy; once locked the bucket and its retention cannot be reduced or deleted | `bool` | `false` | no |
 | <a name="input_retention_days"></a> [retention\_days](#input\_retention\_days) | Number of days logs are retained in the bucket (minimum 30, maximum 3650) | `number` | `365` | no |
-| <a name="input_sinks"></a> [sinks](#input\_sinks) | Map of sink name to sink definition. destination\_type is one of storage, pubsub, bigquery or logging and must<br/>match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T,<br/>bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B).<br/>Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity,<br/>and the module grants it write access on storage/pubsub/bigquery destinations. A logging destination in another<br/>project is not granted: give that sink's writer identity (output sink\_writer\_identities) roles/logging.bucketWriter<br/>on the destination project, or its logs are not delivered. | <pre>map(object({<br/>    destination            = optional(string)<br/>    destination_type       = optional(string, "logging")<br/>    filter                 = string<br/>    description            = string<br/>    disabled               = optional(bool, false)<br/>    use_partitioned_tables = optional(bool, true)<br/>    exclusions = optional(list(object({<br/>      name        = string<br/>      filter      = string<br/>      description = optional(string)<br/>      disabled    = optional(bool, false)<br/>    })), [])<br/>  }))</pre> | `{}` | no |
+| <a name="input_sinks"></a> [sinks](#input\_sinks) | Map of sink name to sink definition. destination\_type is one of storage, pubsub, bigquery or logging and must<br/>match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T,<br/>bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B).<br/>Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity,<br/>and the module grants it write access on its destination: storage, pubsub and bigquery directly, and a log bucket in<br/>another project via roles/logging.bucketWriter on that project, conditioned on the bucket (so the deployer needs IAM<br/>admin on the destination project). The destination project must be known at plan for that grant. | <pre>map(object({<br/>    destination            = optional(string)<br/>    destination_type       = optional(string, "logging")<br/>    filter                 = string<br/>    description            = string<br/>    disabled               = optional(bool, false)<br/>    use_partitioned_tables = optional(bool, true)<br/>    exclusions = optional(list(object({<br/>      name        = string<br/>      filter      = string<br/>      description = optional(string)<br/>      disabled    = optional(bool, false)<br/>    })), [])<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
 
@@ -122,6 +125,8 @@ resource "google_project_iam_custom_role" "terraform_pike" {
     "pubsub.topics.getIamPolicy",
     "pubsub.topics.setIamPolicy",
     "resourcemanager.projects.get",
+    "resourcemanager.projects.getIamPolicy",
+    "resourcemanager.projects.setIamPolicy",
     "storage.buckets.getIamPolicy",
     "storage.buckets.setIamPolicy"
   ]
@@ -142,6 +147,7 @@ resource "google_project_iam_custom_role" "terraform_pike_plan" {
     "logging.sinks.get",
     "pubsub.topics.getIamPolicy",
     "resourcemanager.projects.get",
+    "resourcemanager.projects.getIamPolicy",
     "storage.buckets.getIamPolicy"
   ]
 }

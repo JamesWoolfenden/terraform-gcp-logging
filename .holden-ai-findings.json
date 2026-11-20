@@ -8,7 +8,7 @@
       "first_seen": "2026-11-18",
       "fixable": false,
       "id": "HOLDEN_AI_001",
-      "last_seen": "2026-11-18",
+      "last_seen": "2026-11-19",
       "line": 1,
       "principle": "logging-and-monitoring",
       "related_resources": [
@@ -19,10 +19,10 @@
       "remediation": "Grant roles/logging.bucketWriter (conditioned on the destination bucket's resource name) to the writer identity of each cross-project logging sink. The grant's for_each must be filtered on the destination's project, which is unknown at plan when destination is a computed value, so a plan-safe module-side grant needs an explicit opt-in input; until then the variable description documents the manual grant.",
       "resource": "google_logging_project_sink.main",
       "severity": "LOW",
-      "status": "open",
+      "status": "fixed",
       "suppression_reason": null,
       "title": "Sinks routed to a log bucket in another project get no roles/logging.bucketWriter grant, so their logs are silently not delivered",
-      "unresolved_since": "2026-11-18"
+      "unresolved_since": null
     },
     {
       "confidence": "high",
@@ -53,7 +53,7 @@
       "first_seen": "2026-11-18",
       "fixable": false,
       "id": "HOLDEN_AI_003",
-      "last_seen": "2026-11-18",
+      "last_seen": "2026-11-19",
       "line": 2,
       "principle": "data-protection",
       "related_resources": [
@@ -62,15 +62,67 @@
       "remediation": "Set retention_policy.is_locked = true on the archive bucket, or suppress HLD_GCP_105/HLD_GCP_147 on the example with a reason. Locking is irreversible and blocks deleting the example's objects for 30 days, so it is a judgment call for a demo configuration.",
       "resource": "google_storage_bucket.logs",
       "severity": "LOW",
-      "status": "open",
+      "status": "suppressed",
       "supersedes": "HLD_GCP_105",
-      "suppression_reason": null,
+      "suppression_reason": "Demo configuration: locking a GCS retention policy is irreversible and would block teardown of the example for 30 days",
       "title": "Example's errors-to-storage sink archives to a bucket whose retention policy is not locked",
-      "unresolved_since": "2026-11-18"
+      "unresolved_since": null
+    },
+    {
+      "confidence": "high",
+      "explanation": "The example's audit-to-log-bucket sink routes every cloudaudit.googleapis.com entry into the module's central log bucket, but the module call leaves locked at its default of false. Anyone holding logging.buckets.update can cut retention_days to the minimum or delete the bucket, discarding the audit trail the bucket exists to keep. No built-in policy checks locked on google_logging_project_bucket_config (only HLD_GCP_129 retention and HLD_GCP_349 CMEK), and the sink-to-bucket link crosses the module boundary. It is the log-bucket counterpart of HOLDEN_AI_003.",
+      "file": "example/examplea/module.logging.tf",
+      "first_seen": "2026-11-19",
+      "fixable": false,
+      "id": "HOLDEN_AI_004",
+      "last_seen": "2026-11-19",
+      "line": 2,
+      "principle": "data-protection",
+      "related_resources": [
+        "module.logging.google_logging_project_bucket_config.main",
+        "module.logging.google_logging_project_sink.main[\"audit-to-log-bucket\"]"
+      ],
+      "remediation": "Pass locked = true in the module call for buckets that hold audit logs. Locking is irreversible (the bucket cannot be deleted until every entry ages out of its 400-day retention), so for a demo configuration either lock it deliberately or record why it stays unlocked.",
+      "resource": "module.logging",
+      "severity": "LOW",
+      "status": "suppressed",
+      "suppression_reason": "Demo configuration: locking is irreversible and the log bucket could not be deleted until its 400-day retention expired",
+      "title": "Example routes all audit logs into the central log bucket without locking its retention",
+      "unresolved_since": null
+    },
+    {
+      "confidence": "medium",
+      "explanation": "The bucket's depends_on only orders creation after google_kms_crypto_key_iam_member.logging_service_agent returns; Cloud KMS IAM grants take up to a few minutes to propagate, and Cloud Logging checks the service agent's access to the key when it creates a CMEK bucket. On a fresh project the first apply can fail with a permission error on the key and succeed on re-run. Best-fit principle: apply-time correctness.",
+      "file": "google_logging_project_bucket_config.main.tf",
+      "first_seen": "2026-11-19",
+      "fixable": false,
+      "id": "HOLDEN_AI_005",
+      "last_seen": "2026-11-19",
+      "line": 1,
+      "principle": "reliability",
+      "related_resources": [
+        "google_kms_crypto_key_iam_member.logging_service_agent",
+        "data.google_logging_project_cmek_settings.current"
+      ],
+      "remediation": "Insert a time_sleep (hashicorp/time, create_duration around 60s) triggered by the key grant and make the bucket depend on it, or document that a first apply may need a re-run. Adding the time provider is a module interface change, so weigh it against documenting the retry.",
+      "resource": "google_logging_project_bucket_config.main",
+      "severity": "LOW",
+      "status": "fixed",
+      "suppression_reason": null,
+      "title": "CMEK log bucket is created straight after its KMS grant, so IAM propagation lag can fail the first apply",
+      "unresolved_since": null
     }
   ],
-  "scan_date": "2026-11-18T00:00:00Z",
+  "scan_date": "2026-11-19T00:00:00Z",
   "scan_path": ".",
-  "suggested_policies": [],
+  "suggested_policies": [
+    {
+      "first_seen": "2026-11-19",
+      "last_seen": "2026-11-19",
+      "rationale": "HLD_GCP_105 requires a locked retention policy when a sink writes to a GCS bucket, but nothing covers the equivalent for sinks that write to a Cloud Logging bucket: google_logging_project_bucket_config has no check on locked. An unlocked log bucket lets anyone with logging.buckets.update shorten retention or delete the bucket, so routed logs can be purged early. The check is one sink attribute plus one referenced-resource attribute, the same shape as HLD_GCP_105.",
+      "status": "installed",
+      "yaml": "id: LOCAL_GCP_001\nname: Cloud Logging sinks to a log bucket must target a bucket with a locked retention policy\nprinciple: data-protection\nseverity: MEDIUM\nrationale: |\n  A sink that routes to a Cloud Logging bucket whose retention is not locked\n  lets anyone with logging.buckets.update shorten retention_days or delete the\n  bucket, purging the routed logs before their retention period ends. Locking\n  makes the retention immutable, the log-bucket equivalent of GCS Bucket Lock.\nmessage: |\n  google_logging_project_sink routes to a google_logging_project_bucket_config\n  that does not set locked = true.\nremediation: |\n  Lock the destination bucket's retention (irreversible):\n\n    resource \"google_logging_project_bucket_config\" \"audit\" {\n      retention_days = 365\n      locked         = true\n    }\nresources:\n  google_logging_project_sink:\n    filter:\n      path: destination\n      matches: '^logging\\.googleapis\\.com/'\n    references:\n      type: google_logging_project_bucket_config\n      via: destination\n      must:\n        path: locked\n        equals: true\n        required: true\n"
+    }
+  ],
   "suggested_suppressions": []
 }

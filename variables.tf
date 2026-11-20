@@ -93,9 +93,9 @@ variable "sinks" {
   match destination (storage.googleapis.com/BUCKET, pubsub.googleapis.com/projects/P/topics/T,
   bigquery.googleapis.com/projects/P/datasets/D or logging.googleapis.com/projects/P/locations/L/buckets/B).
   Leave destination unset to route to the log bucket this module creates. Each sink gets a unique writer identity,
-  and the module grants it write access on storage/pubsub/bigquery destinations. A logging destination in another
-  project is not granted: give that sink's writer identity (output sink_writer_identities) roles/logging.bucketWriter
-  on the destination project, or its logs are not delivered.
+  and the module grants it write access on its destination: storage, pubsub and bigquery directly, and a log bucket in
+  another project via roles/logging.bucketWriter on that project, conditioned on the bucket (so the deployer needs IAM
+  admin on the destination project). The destination project must be known at plan for that grant.
   EOT
   default     = {}
 
