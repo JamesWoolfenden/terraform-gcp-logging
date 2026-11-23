@@ -1,4 +1,5 @@
 # holden:ignore:HLD_GCP_003 — this bucket is itself a log archive; access logging it would need a further log bucket, just enough to drive the module
+# holden:ignore:HLD_GCP_105 — demo config: locking a GCS retention policy is irreversible and would block teardown of the example for 30 days; set is_locked = true in real use
 resource "google_storage_bucket" "logs" {
   name                        = "${data.google_project.current.project_id}-log-archive"
   location                    = local.region
@@ -29,6 +30,7 @@ resource "google_storage_bucket" "logs" {
 
   retention_policy {
     retention_period = 2592000 # 30 days
+    # is_locked = true # irreversible: objects can't be deleted until the period ends. Left unlocked so the example can be torn down.
   }
 
   depends_on = [google_kms_crypto_key_iam_member.storage_service_agent]
